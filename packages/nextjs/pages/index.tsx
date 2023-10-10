@@ -1,62 +1,71 @@
-import Link from "next/link";
+import { useEffect } from "react";
 import type { NextPage } from "next";
-import { BugAntIcon, MagnifyingGlassIcon, SparklesIcon } from "@heroicons/react/24/outline";
+import { useLocalStorage } from "usehooks-ts";
 import { MetaHeader } from "~~/components/MetaHeader";
+import { ContractUI } from "~~/components/scaffold-eth";
+import { ContractName } from "~~/utils/scaffold-eth/contract";
+import { getContractNames } from "~~/utils/scaffold-eth/contractNames";
+
+const selectedContractStorageKey = "scaffoldEth2.selectedContract";
+const contractNames = getContractNames();
 
 const Home: NextPage = () => {
+  const [selectedContract, setSelectedContract] = useLocalStorage<ContractName>(
+    selectedContractStorageKey,
+    contractNames[0],
+  );
+
+  useEffect(() => {
+    if (!contractNames.includes(selectedContract)) {
+      setSelectedContract(contractNames[0]);
+    }
+  }, [selectedContract, setSelectedContract]);
+
   return (
     <>
-      <MetaHeader />
-      <div className="flex items-center flex-col flex-grow pt-10">
-        <div className="px-5">
-          <h1 className="text-center mb-8">
-            <span className="block text-2xl mb-2">Welcome to</span>
-            <span className="block text-4xl font-bold">Scaffold-ETH 2</span>
-          </h1>
-          <p className="text-center text-lg">
-            Get started by editing{" "}
-            <code className="italic bg-base-300 text-base font-bold">packages/nextjs/pages/index.tsx</code>
-          </p>
-          <p className="text-center text-lg">
-            Edit your smart contract <code className="italic bg-base-300 text-base font-bold">YourContract.sol</code> in{" "}
-            <code className="italic bg-base-300 text-base font-bold">packages/hardhat/contracts</code>
-          </p>
-        </div>
-
-        <div className="flex-grow bg-base-300 w-full mt-16 px-8 py-12">
-          <div className="flex justify-center items-center gap-12 flex-col sm:flex-row">
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <BugAntIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Tinker with your smart contract using the{" "}
-                <Link href="/debug" passHref className="link">
-                  Debug Contract
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <SparklesIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Experiment with{" "}
-                <Link href="/example-ui" passHref className="link">
-                  Example UI
-                </Link>{" "}
-                to build your own UI.
-              </p>
-            </div>
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Explore your local transactions with the{" "}
-                <Link href="/blockexplorer" passHref className="link">
-                  Block Explorer
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
-          </div>
-        </div>
+      <MetaHeader
+        title="Debug Contracts | Scaffold-ETH 2"
+        description="Debug your deployed 🏗 Scaffold-ETH 2 contracts in an easy way"
+      />
+      <div className="flex flex-col gap-y-6 lg:gap-y-8 py-8 lg:py-12 justify-center items-center">
+        {contractNames.length === 0 ? (
+          <p className="text-3xl mt-14">No contracts found!</p>
+        ) : (
+          <>
+            {contractNames.length > 1 && (
+              <div className="flex flex-row gap-2 w-full max-w-7xl pb-1 px-6 lg:px-10 flex-wrap">
+                {contractNames.map(contractName => (
+                  <button
+                    className={`btn btn-secondary btn-sm normal-case font-thin ${
+                      contractName === selectedContract ? "bg-base-300" : "bg-base-100"
+                    }`}
+                    key={contractName}
+                    onClick={() => setSelectedContract(contractName)}
+                  >
+                    {contractName}
+                  </button>
+                ))}
+              </div>
+            )}
+            {contractNames.map(contractName => (
+              <ContractUI
+                key={contractName}
+                contractName={contractName}
+                className={contractName === selectedContract ? "" : "hidden"}
+              />
+            ))}
+          </>
+        )}
+      </div>
+      <div className="text-center mt-8 bg-secondary p-10">
+        <h1 className="text-4xl my-0">Debug Contracts</h1>
+        <p className="text-neutral">
+          You can debug & interact with your deployed contracts here.
+          <br /> Check{" "}
+          <code className="italic bg-base-300 text-base font-bold [word-spacing:-0.5rem] px-1">
+            packages / nextjs / pages / debug.tsx
+          </code>{" "}
+        </p>
       </div>
     </>
   );
