@@ -5,16 +5,21 @@ const contracts = {
       name: "goerli",
       contracts: {
         Splitter: {
-          address: "0x33596Aa1Fe70b1470a40B555661a68FEc62664Bd",
+          address: "0x5BC3C051928438bcDE32c012f876163dCC9449c4",
           abi: [
+            {
+              inputs: [],
+              stateMutability: "nonpayable",
+              type: "constructor",
+            },
             {
               anonymous: false,
               inputs: [
                 {
                   indexed: false,
-                  internalType: "address[]",
-                  name: "recipients",
-                  type: "address[]",
+                  internalType: "address",
+                  name: "recipient",
+                  type: "address",
                 },
                 {
                   indexed: false,
@@ -88,9 +93,15 @@ const contracts = {
                 },
                 {
                   indexed: false,
-                  internalType: "address[]",
-                  name: "recipients",
-                  type: "address[]",
+                  internalType: "address",
+                  name: "recipient",
+                  type: "address",
+                },
+                {
+                  indexed: false,
+                  internalType: "uint256",
+                  name: "amount",
+                  type: "uint256",
                 },
               ],
               name: "TokenDistributed",
@@ -124,14 +135,57 @@ const contracts = {
             {
               inputs: [
                 {
-                  internalType: "address",
-                  name: "_tokenAddress",
+                  internalType: "contract IERC20",
+                  name: "_token",
                   type: "address",
                 },
               ],
               name: "distributeToken",
               outputs: [],
               stateMutability: "nonpayable",
+              type: "function",
+            },
+            {
+              inputs: [
+                {
+                  internalType: "address",
+                  name: "",
+                  type: "address",
+                },
+              ],
+              name: "etherReleased",
+              outputs: [
+                {
+                  internalType: "uint256",
+                  name: "",
+                  type: "uint256",
+                },
+              ],
+              stateMutability: "view",
+              type: "function",
+            },
+            {
+              inputs: [
+                {
+                  internalType: "contract IERC20",
+                  name: "_token",
+                  type: "address",
+                },
+                {
+                  internalType: "address",
+                  name: "_recipient",
+                  type: "address",
+                },
+              ],
+              name: "getErc20Released",
+              outputs: [
+                {
+                  internalType: "uint256",
+                  name: "",
+                  type: "uint256",
+                },
+              ],
+              stateMutability: "view",
               type: "function",
             },
             {
@@ -185,6 +239,38 @@ const contracts = {
                 {
                   internalType: "uint256",
                   name: "balance",
+                  type: "uint256",
+                },
+              ],
+              stateMutability: "view",
+              type: "function",
+            },
+            {
+              inputs: [
+                {
+                  internalType: "contract IERC20",
+                  name: "_token",
+                  type: "address",
+                },
+              ],
+              name: "getTotalErc20Released",
+              outputs: [
+                {
+                  internalType: "uint256",
+                  name: "",
+                  type: "uint256",
+                },
+              ],
+              stateMutability: "view",
+              type: "function",
+            },
+            {
+              inputs: [],
+              name: "getTotalEtherReleased",
+              outputs: [
+                {
+                  internalType: "uint256",
+                  name: "",
                   type: "uint256",
                 },
               ],
@@ -268,13 +354,18 @@ const contracts = {
           address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
           abi: [
             {
+              inputs: [],
+              stateMutability: "nonpayable",
+              type: "constructor",
+            },
+            {
               anonymous: false,
               inputs: [
                 {
                   indexed: false,
-                  internalType: "address[]",
-                  name: "recipients",
-                  type: "address[]",
+                  internalType: "address",
+                  name: "recipient",
+                  type: "address",
                 },
                 {
                   indexed: false,
@@ -348,9 +439,15 @@ const contracts = {
                 },
                 {
                   indexed: false,
-                  internalType: "address[]",
-                  name: "recipients",
-                  type: "address[]",
+                  internalType: "address",
+                  name: "recipient",
+                  type: "address",
+                },
+                {
+                  indexed: false,
+                  internalType: "uint256",
+                  name: "amount",
+                  type: "uint256",
                 },
               ],
               name: "TokenDistributed",
@@ -384,14 +481,57 @@ const contracts = {
             {
               inputs: [
                 {
-                  internalType: "address",
-                  name: "_tokenAddress",
+                  internalType: "contract IERC20",
+                  name: "_token",
                   type: "address",
                 },
               ],
               name: "distributeToken",
               outputs: [],
               stateMutability: "nonpayable",
+              type: "function",
+            },
+            {
+              inputs: [
+                {
+                  internalType: "address",
+                  name: "",
+                  type: "address",
+                },
+              ],
+              name: "etherReleased",
+              outputs: [
+                {
+                  internalType: "uint256",
+                  name: "",
+                  type: "uint256",
+                },
+              ],
+              stateMutability: "view",
+              type: "function",
+            },
+            {
+              inputs: [
+                {
+                  internalType: "contract IERC20",
+                  name: "_token",
+                  type: "address",
+                },
+                {
+                  internalType: "address",
+                  name: "_recipient",
+                  type: "address",
+                },
+              ],
+              name: "getErc20Released",
+              outputs: [
+                {
+                  internalType: "uint256",
+                  name: "",
+                  type: "uint256",
+                },
+              ],
+              stateMutability: "view",
               type: "function",
             },
             {
@@ -445,6 +585,38 @@ const contracts = {
                 {
                   internalType: "uint256",
                   name: "balance",
+                  type: "uint256",
+                },
+              ],
+              stateMutability: "view",
+              type: "function",
+            },
+            {
+              inputs: [
+                {
+                  internalType: "contract IERC20",
+                  name: "_token",
+                  type: "address",
+                },
+              ],
+              name: "getTotalErc20Released",
+              outputs: [
+                {
+                  internalType: "uint256",
+                  name: "",
+                  type: "uint256",
+                },
+              ],
+              stateMutability: "view",
+              type: "function",
+            },
+            {
+              inputs: [],
+              name: "getTotalEtherReleased",
+              outputs: [
+                {
+                  internalType: "uint256",
+                  name: "",
                   type: "uint256",
                 },
               ],

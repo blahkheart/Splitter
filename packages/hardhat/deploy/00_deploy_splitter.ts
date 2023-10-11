@@ -32,7 +32,8 @@ const deploySplitter: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   // Get the deployed contract
   const yourContract = await hre.ethers.getContract("Splitter", deployer);
-  await yourContract.transferOwnership("0xE11Cd5244DE68D90755a1d142Ab446A4D17cDC10");
+  const tx = await yourContract.transferOwnership("0xE11Cd5244DE68D90755a1d142Ab446A4D17cDC10");
+  console.log("txn hash:", tx.hash);
 };
 
 export default deploySplitter;

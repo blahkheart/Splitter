@@ -10,7 +10,6 @@ pragma solidity >=0.8.0 <0.9.0;
     to the best of the developers' knowledge to work as intended.
 */
 
-
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -27,26 +26,83 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 
 interface IERC20 {
-    function decimals() external view returns (uint256);
-
     function balanceOf(address account) external view returns (uint256);
-
     function transfer(address to, uint256 value) external returns (bool);
 }
 
 contract Splitter is Ownable {
     mapping(address => uint256) shares;
     mapping(address => bool) addedRecipients;
+    mapping(address => uint256) public etherReleased;
+    mapping(IERC20 => mapping(address => uint256)) erc20Released;
+    mapping(IERC20 => uint256) erc20TotalReleased;
+
     address[] recipients;
     uint256 constant MAX_SHARES = 100;
     uint256 public totalShares = 0;
+    uint256 totalReleased;
 
     event RecipientAdded(address indexed recipient, uint256 indexed share);
     event RecipientRemoved(address indexed recipient);
-    event TokenDistributed(address indexed token, address[] recipients);
-    event EtherDistributed(address[] recipients, uint256 amount);
+    event TokenDistributed(address indexed token, address recipient, uint256 amount);
+    event EtherDistributed(address recipient, uint256 amount);
+
+    constructor() { }
 
     receive() external payable {}
+
+    /**
+     * @notice Gets the share of a recipient.
+     * @param _recipient Address of the recipient.
+     * @return percentageShare Number of basis points representing the recipient's share.
+     */
+    function getShares(address _recipient) public view returns(uint256 percentageShare) {
+        percentageShare = shares[_recipient];
+    }
+
+    /**
+     * @notice Checks if an address is a valid recipient.
+     * @param _recipient Address to be checked.
+     * @return isRecipient Boolean indicating whether the address is a valid recipient.
+     */
+    function getIsRecipient(address _recipient)public view returns(bool isRecipient){
+        isRecipient = addedRecipients[_recipient];
+    }
+
+    /**
+     * @notice Gets the token balance of the contract for a specific ERC20 token.
+     * @param _tokenAddress Address of the ERC20 token.
+     * @return balance Token balance of the contract for the specified token.
+     */
+    function getTokenBalance(address _tokenAddress) public view returns(uint256 balance) {
+        balance = IERC20(_tokenAddress).balanceOf(address(this));
+    }
+
+    /**
+     * @dev Getter for the total amount of Ether already released.
+     * @return uint256 Total ether amount distributed by the contract.
+     */
+    function getTotalEtherReleased() public view returns (uint256) {
+        return totalReleased;
+    }
+
+    /**
+     * @notice Gets the total token amount distributed to a `_recipient` for a specific ERC20 token.
+     * @param _token Address of an ERC20 token contract.
+     * @return uint256 ERC20 Token amount distributed by the contract to `_recipient` for `_token` specified.
+     */
+    function getErc20Released(IERC20 _token, address _recipient) public view returns(uint256){
+        return erc20Released[_token][_recipient];
+    }
+
+    /**
+     * @notice Gets the total token amount distributed by the contract for a specific ERC20 token.
+     * @param _token Address of an ERC20 token contract.
+     * @return uint256 ERC20 Token balance distributed by the contract for `_token` specified.
+     */
+    function getTotalErc20Released(IERC20 _token) public view returns(uint256){
+        return erc20TotalReleased[_token];
+    }
 
     /**
      * @notice Adds a recipient with a specified share.
@@ -81,6 +137,34 @@ contract Splitter is Ownable {
         _removeRecipient(_recipient);
     }
 
+    /**
+     * @notice Distributes tokens among recipients based on their shares.
+     * @param _token Interface of the ERC20 token to be distributed.
+     */
+    function distributeToken(IERC20 _token) public onlyOwner {
+        require(_token.balanceOf(address(this)) > 0, "Zero balance");
+        require(recipients.length > 1, "At least 2 recipients required");
+        for(uint256 i = 0; i < recipients.length; i++) {
+            _releaseTokens(_token, recipients[i]);
+        }
+    }
+
+    /**
+     * @notice Distributes Ether among recipients based on their shares.
+     */
+    function distributeEther() public payable onlyOwner {
+        require(address(this).balance > 0, "Zero ETH balance");
+        require(recipients.length > 1, "At least 2 recipients required");
+        
+        for(uint256 i = 0; i < recipients.length; i++) {
+            _releaseEther(payable(recipients[i]));
+        }
+    }
+
+    /**
+     * @dev internal logic for removing a recipient and thier shares.
+     * @param _recipient Address of the recipient to be removed..
+     */
     function _removeRecipient(address _recipient) private {
        uint256 recipientToRemoveIndex;
        uint256 currentShare = shares[_recipient];
@@ -99,63 +183,54 @@ contract Splitter is Ownable {
     }
 
     /**
-     * @notice Gets the share of a recipient.
-     * @param _recipient Address of the recipient.
-     * @return percentageShare Number of basis points representing the recipient's share.
+     * @dev internal logic for computing the pending payment of an `account` given the token historical balances and
+     * already released amounts.
      */
-    function getShares(address _recipient) public view returns(uint256 percentageShare) {
-        percentageShare = shares[_recipient];
+    function _pendingPayment(
+        address account,
+        uint256 totalReceived,
+        uint256 alreadyReleased
+    ) internal view returns (uint256) {
+        return (totalReceived * shares[account]) / totalShares - alreadyReleased;
     }
 
     /**
-     * @notice Checks if an address is a valid recipient.
-     * @param _recipient Address to be checked.
-     * @return isRecipient Boolean indicating whether the address is a valid recipient.
+     * @dev Internal logic for triggering a transfer to `account` the amount of Ether they are owed, according to their percentage of the
+     * total shares and their previous withdrawals.
      */
-    function getIsRecipient(address _recipient)public view returns(bool isRecipient){
-        isRecipient = addedRecipients[_recipient];
-    }
+    function _releaseEther(address payable account) internal returns (uint256) {
+        uint256 totalReceived = address(this).balance + totalReleased;
+        uint256 payment = _pendingPayment(account, totalReceived, etherReleased[account]);
 
-    /**
-     * @notice Distributes tokens among recipients based on their shares.
-     * @param _tokenAddress Address of the ERC20 token to be distributed.
-     */
-    function distributeToken(address _tokenAddress) public onlyOwner {
-        require(IERC20(_tokenAddress).balanceOf(address(this)) > 0, "Zero balance");
-        require(recipients.length > 1, "At least 2 recipients required");
-        uint256 decimal = IERC20(_tokenAddress).decimals();
-        require(decimal > 0, "ERC20_ERR: Invalid token decimals");
-        for(uint256 i = 0; i < recipients.length; i++) {
-            uint256 _share = shares[recipients[i]];
-            uint256 tokenBalance = getTokenBalance(_tokenAddress);
-            uint256 shareAmount = (tokenBalance * _share) / 100;
-            (bool success) = IERC20(_tokenAddress).transfer(recipients[i], shareAmount);
-            require(success, "Failed to transfer tokens");
+        if (payment == 0) {
+            return 0;
         }
-        emit TokenDistributed(_tokenAddress, recipients);
+
+        etherReleased[account] += payment;
+        totalReleased += payment;
+
+        (bool success) = payable(account).send(payment);
+        require(success, "Failed to transfer Ether");
+        emit EtherDistributed(account, payment);
+        return payment;
     }
 
     /**
-     * @notice Distributes Ether among recipients based on their shares.
+     * @dev Internal logic for triggering a transfer to `account` the amount of `token` they are owed, according to their
+     * percentage of the total shares and their previous withdrawals. `token` must be the address of an IERC20
+     * contract.
      */
-    function distributeEther() public payable onlyOwner {
-        require(address(this).balance > 0, "Zero ETH balance");
-        require(recipients.length > 1, "At least 2 recipients required");
-        for(uint256 i = 0; i < recipients.length; i++) {
-            uint256 _share = shares[recipients[i]];
-            uint256 amount = (address(this).balance * _share) / 100;
-		    (bool success,) = payable(recipients[i]).call{value: amount}("");
-            require(success, "Failed to transfer Ether");
-        }
-        emit EtherDistributed(recipients, msg.value);
-    }
+    function _releaseTokens(IERC20 token, address account) private {
+        uint256 totalReceived = token.balanceOf(address(this)) + erc20TotalReleased[token];
+        uint256 payment = _pendingPayment(account, totalReceived, erc20Released[token][account]);
 
-    /**
-     * @notice Gets the token balance of the contract for a specific ERC20 token.
-     * @param _tokenAddress Address of the ERC20 token.
-     * @return balance Token balance of the contract for the specified token.
-     */
-    function getTokenBalance(address _tokenAddress) public view returns(uint256 balance) {
-        balance = IERC20(_tokenAddress).balanceOf(address(this));
+        require(payment != 0, "PaymentSplitter: account is not due payment");
+
+        erc20Released[token][account] += payment;
+        erc20TotalReleased[token] += payment;
+
+        (bool success) = IERC20(token).transfer(account, payment);
+        require(success, "Failed to transfer tokens");
+        emit TokenDistributed(address(token), account, payment);
     }
 }
